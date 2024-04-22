@@ -3,6 +3,8 @@ package main
 import (
 	"log"
 	"os"
+
+	"github.com/tylerkeyes/compression-tool/huffman"
 )
 
 /*
@@ -20,14 +22,18 @@ func main() {
 	fileName := os.Args[1]
 	log.Printf("file name: %v\n", fileName)
 
-	freqMap := count_frequency(fileName)
+	freqMap, charList := count_frequency(fileName)
 	log.Printf("X: %v\n", (*freqMap)['X'])
 	log.Printf("t: %v\n", (*freqMap)['t'])
-	log.Printf("frequency map:\n%+v\n", freqMap)
+	log.Printf("frequency map:\n%+v\nchar list:\n%+v\n", freqMap, charList)
+
+	huffmanTree := huffman.BuildTree(freqMap)
+	log.Printf("huffman tree: %+v\n", huffmanTree)
 }
 
-func count_frequency(fileName string) *map[rune]int {
+func count_frequency(fileName string) (*map[rune]int, *[]rune) {
 	charFreq := make(map[rune]int, 256) // start with size for each UTF-8 character
+	charList := make([]rune, 0)
 	bytes, err := os.ReadFile(fileName)
 	if err != nil {
 		log.Fatalf("error reading file: %v\n", err)
@@ -41,8 +47,9 @@ func count_frequency(fileName string) *map[rune]int {
 			charFreq[char] = v + 1
 		} else {
 			charFreq[char] = 1
+			charList = append(charList, char)
 		}
 	}
 
-	return &charFreq
+	return &charFreq, &charList
 }
