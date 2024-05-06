@@ -2,11 +2,57 @@ package huffman
 
 import (
 	"container/heap"
+	"fmt"
+	_ "log"
 )
 
 type HuffBaseNode interface {
 	IsLeaf() bool
 	Weight() int
+}
+
+func isPowerOf2(n int) bool {
+	if n == 0 {
+		return false
+	}
+	for n != 1 {
+		if n%2 != 0 {
+			return false
+		}
+		n = n / 2
+	}
+	return true
+}
+
+func VisualizeTree(tree *HuffBaseNode) {
+	queue := make([]HuffBaseNode, 0)
+
+	queue = append(queue, *tree)
+	count := 1
+	output := ""
+	var node HuffBaseNode
+
+	for len(queue) > 0 {
+		node = queue[0]
+		queue = queue[1:]
+
+		output = output + fmt.Sprint(node.Weight()) + " | "
+		if isPowerOf2(count) {
+			output = output + "\n"
+		}
+
+		if count == 4 {
+			break
+		}
+		count += 1
+		if node.IsLeaf() {
+			node = node.(HuffLeafNode)
+		} else {
+			leafNode := node.(HuffInternalNode)
+			queue = append(queue, *leafNode.left)
+			queue = append(queue, *leafNode.right)
+		}
+	}
 }
 
 // Huffman Leaf Node
@@ -15,8 +61,8 @@ type HuffLeafNode struct {
 	weight  int
 }
 
-func NewHuffLeafNode(element rune, weight int) *HuffLeafNode {
-	return &HuffLeafNode{
+func NewHuffLeafNode(element rune, weight int) HuffLeafNode {
+	return HuffLeafNode{
 		element,
 		weight,
 	}
@@ -37,8 +83,8 @@ type HuffInternalNode struct {
 	right  *HuffBaseNode
 }
 
-func NewHuffInternalNode(weight int, left *HuffBaseNode, right *HuffBaseNode) *HuffInternalNode {
-	return &HuffInternalNode{
+func NewHuffInternalNode(weight int, left *HuffBaseNode, right *HuffBaseNode) HuffInternalNode {
+	return HuffInternalNode{
 		weight,
 		left,
 		right,
@@ -83,10 +129,6 @@ func (h *HuffTreeHeap) Pop() any {
 
 // Build the Huffman Encoding Tree
 func BuildTree(freqMap *map[rune]int) *HuffBaseNode {
-	var tmp1 HuffBaseNode
-	var tmp2 HuffBaseNode
-	var tmp3 HuffBaseNode
-
 	huffHeap := &HuffTreeHeap{}
 	heap.Init(huffHeap)
 	// create the input min-heap of leaf nodes
@@ -95,13 +137,42 @@ func BuildTree(freqMap *map[rune]int) *HuffBaseNode {
 		heap.Push(huffHeap, node)
 	}
 
+	var result HuffBaseNode
 	// construct the Huffman Encoding tree using the min-heap
 	for huffHeap.Len() > 1 {
-		tmp1 = heap.Pop(huffHeap).(HuffBaseNode)
-		tmp2 = heap.Pop(huffHeap).(HuffBaseNode)
-		tmp3 = *(NewHuffInternalNode(tmp1.Weight()+tmp2.Weight(), &tmp1, &tmp2))
-		heap.Push(huffHeap, tmp3)
+		left := heap.Pop(huffHeap).(HuffBaseNode)
+		right := heap.Pop(huffHeap).(HuffBaseNode)
+		top := NewHuffInternalNode(left.Weight()+right.Weight(), &left, &right)
+		heap.Push(huffHeap, top)
+		result = top
 	}
 
-	return &tmp3
+	return &result
+}
+
+// Generate the prefix codes table
+func CreatePrefixCodes(tree *HuffBaseNode) *map[rune]string {
+	prefixCodes := make(map[rune]string, 0)
+
+	traverseHuffmanTree(*tree, &prefixCodes, "")
+
+	return &prefixCodes
+}
+
+// recursively traverse the tree, assigning encoded values when an end is reached
+func traverseHuffmanTree(tree HuffBaseNode, prefixCodes *map[rune]string, encoding string) {
+	if tree.IsLeaf() {
+		leaf := tree.(HuffLeafNode)
+		(*prefixCodes)[leaf.element] = encoding
+		//(*prefixCodes)[rune(tree.Weight())] = encoding
+		return
+	}
+
+	leftNode := tree.(HuffInternalNode).left
+	rightNode := tree.(HuffInternalNode).right
+
+	encodingL := encoding + "0"
+	encodingR := encoding + "1"
+	traverseHuffmanTree(*leftNode, prefixCodes, encodingL)
+	traverseHuffmanTree(*rightNode, prefixCodes, encodingR)
 }
