@@ -1,4 +1,4 @@
-package huffman
+package internal
 
 import (
 	"container/heap"
