@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"regexp"
 	"strconv"
 	"strings"
 )
@@ -12,12 +13,8 @@ import (
 
 func Decompress_file(fileName string) {
 	prefixCodes, binaryString, binaryLen := extract_stored_values(fileName)
-	log.Printf("prefix codes: %+v\n", prefixCodes)
 	invertedCodes := invert_prefix_codes(prefixCodes)
-	log.Printf("inverted prefix codes: %+v\n", invertedCodes)
 	decodedString := convert_binary_to_char(invertedCodes, binaryString, binaryLen)
-	fmt.Printf("decoded string: %+v\n", decodedString)
-	log.Printf("prefixCodes len: %v, binaryString: %v, binaryLen: %v, decodedString: %v\n", len(*invertedCodes), len(binaryString), binaryLen, len(decodedString))
 	write_to_file(fileName, decodedString)
 }
 
@@ -25,43 +22,30 @@ func extract_stored_values(fileName string) (*map[rune]string, string, int) {
 	bytes, err := os.ReadFile(fileName)
 	assert_msg(err, fmt.Sprintf("error reading file: %v\n", err))
 	data := string(bytes)
-	newlineCount := 0
-	newlineLimit := 3
-	trail := 0
 
 	var prefixCodesLen int
 	var prefixCodes map[rune]string
 	var bitNumber int
-
 	var encodedString strings.Builder
 
-	for pos, char := range data {
-		if newlineCount < newlineLimit {
-			if char == '\n' {
-				if newlineCount == 0 {
-					prefixCodesLen, err = strconv.Atoi(data[trail:pos])
-					assert_msg(err, "problem reading prefix codes map size")
-					newlineCount += 1
-					trail = pos + 1
-				} else if newlineCount == 1 {
-					prefixCodes = *create_prefix_codes_map(data[trail:pos], prefixCodesLen)
-					trail = pos + 1
-					newlineCount += 1
-				} else if newlineCount == 2 {
-					bitNumber, err = strconv.Atoi(data[trail:pos])
-					assert_msg(err, "problem reading binary data length")
-					newlineCount += 1
-					trail = pos + 1
-				}
-			}
-		} else {
-			binaryChar := fmt.Sprintf("%08b", char)
-			_, err = encodedString.WriteString(binaryChar)
-			assert(err)
-		}
-	}
+	// find all lines of the file, using the starting and ending indexes in the string
+	var regex = regexp.MustCompile(`(?m)^.*$`)
+	fileLines := regex.FindAllStringIndex(data, -1)
+	firstThree := fileLines[:3]
 
-	log.Printf("binary string: %v\n", encodedString.String())
+	prefixCodesLen, err = strconv.Atoi(data[firstThree[0][0]:firstThree[0][1]])
+	prefixCodes = *create_prefix_codes_map(data[firstThree[1][0]:firstThree[1][1]], prefixCodesLen)
+	bitNumber, err = strconv.Atoi(data[firstThree[2][0]:firstThree[2][1]])
+	assert_msg(err, "problem reading binary data length")
+
+	dataStart := firstThree[2][1] + 1 // adding 1 to move past the last '\n'
+	compressedData := data[dataStart:]
+
+	for i := 0; i < len(compressedData); i++ {
+		binaryChar := fmt.Sprintf("%08b", compressedData[i])
+		_, err = encodedString.WriteString(binaryChar)
+		assert(err)
+	}
 
 	return &prefixCodes, encodedString.String(), bitNumber
 }

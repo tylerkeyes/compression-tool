@@ -164,7 +164,6 @@ func traverseHuffmanTree(tree HuffBaseNode, prefixCodes *map[rune]string, encodi
 	if tree.IsLeaf() {
 		leaf := tree.(HuffLeafNode)
 		(*prefixCodes)[leaf.element] = encoding
-		//(*prefixCodes)[rune(tree.Weight())] = encoding
 		return
 	}
 

@@ -24,9 +24,6 @@ Decode/Restore
 3. Read remaining bytes and create full binary string.
 4. Convert binary string to original file.
 */
-/*
-	TODO: Read compressed file and restore to original format
-*/
 var (
 	encode          = flag.Bool("c", false, "compress the input file")
 	decode          = flag.Bool("x", false, "decompress the input file")

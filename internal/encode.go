@@ -22,15 +22,13 @@ func assert_msg(err error, msg string) {
 // Encoding Functions
 
 func Compress_file(fileName string, archiveName string) {
-	freqMap, _, dataLen := count_frequency(fileName)
+	freqMap, _, _ := count_frequency(fileName)
 
 	huffmanTree := BuildTree(freqMap)
 
 	prefixCodes := CreatePrefixCodes(huffmanTree)
 
 	encodedBinary, bitLen := create_binary_encoding(fileName, prefixCodes)
-
-	log.Printf("compression improvement: %v, archive: %v\n", float64(len(*encodedBinary))/float64(dataLen)*100, archiveName)
 
 	write_compressed_data(encodedBinary, prefixCodes, archiveName, bitLen)
 }
@@ -70,7 +68,6 @@ func create_binary_encoding(fileName string, prefixCodes *map[rune]string) (*[]b
 
 	encodedString := sb.String()
 	bitLen := len(encodedString)
-	log.Printf("binary string: %v\n", encodedString)
 	binaryEncoding := convert_string_to_bytes(encodedString)
 
 	return binaryEncoding, bitLen
